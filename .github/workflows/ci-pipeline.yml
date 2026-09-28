@@ -1,0 +1,55 @@
+name: CI Pipeline & Versioning
+
+on:
+  # Trigger on Pull Requests to catch bugs before merging
+  pull_request:
+    branches: [ "main" ]
+  # Trigger on Push to main to generate a version and build
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: write # Required for the pipeline to create git tags
+
+jobs:
+  validate-and-test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+
+      - name: Execute Tests
+        run: pytest test_app.py
+
+  version-and-build:
+    name: Version & Build
+    needs: validate-and-test # This job only runs if tests pass
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      - name: Bump Version and Push Tag
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch # Automatically bumps v1.0.0 to v1.0.1
+
+      - name: Build Docker Image with Version Tag
+        run: |
+          docker build -t my-task-api:${{ steps.tag_version.outputs.new_tag }} .
+          docker build -t my-task-api:latest .
+          # Run 'docker push' here if connected to a registry like Docker Hub
