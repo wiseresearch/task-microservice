@@ -30,9 +30,9 @@ def get_tasks():
 def health_check():
     try:
         db.ping()
-        return jsonify({"status": "healthy", "database": "connected"}), 200
+        return jsonify({"state": "healthy", "database": "connected"}), 200
     except redis.ConnectionError:
-        return jsonify({"status": "unhealthy", "database": "disconnected"}), 503
+        return jsonify({"state": "unhealthy", "database": "disconnected"}), 503
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
